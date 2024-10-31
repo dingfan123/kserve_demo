@@ -3,26 +3,32 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
-ratings = pd.read_csv('ml-latest-small/ratings.csv')
-movies = pd.read_csv('ml-latest-small/movies.csv')
+# Load data
+ratings = pd.read_csv('small_dataset/ratings.csv')
+movies = pd.read_csv('small_dataset/movies.csv')
 
-data = pd.merge(ratings, movies, on='movieId')
+# Map user and movie IDs to continuous indices
+user_ids = ratings['userId'].unique().tolist()
+movie_ids = ratings['movieId'].unique().tolist()
+user_to_index = {id: idx for idx, id in enumerate(user_ids)}
+movie_to_index = {id: idx for idx, id in enumerate(movie_ids)}
 
-user_ids = data['userId'].unique().tolist()
-movie_ids = data['movieId'].unique().tolist()
-user_to_index = {x: i for i, x in enumerate(user_ids)}
-movie_to_index = {x: i for i, x in enumerate(movie_ids)}
-data['user'] = data['userId'].map(user_to_index)
-data['movie'] = data['movieId'].map(movie_to_index)
+# Apply mappings to ratings data
+ratings['user'] = ratings['userId'].map(user_to_index)
+ratings['movie'] = ratings['movieId'].map(movie_to_index)
 
+# Number of unique users and movies
 num_users = len(user_ids)
 num_movies = len(movie_ids)
 
-X = data[['user', 'movie']].values
-y = data['rating'].values
+# Prepare training data
+X = ratings[['user', 'movie']].values
+y = ratings['rating'].values
 
+# Split into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# Build the model
 user_input = tf.keras.layers.Input(shape=(1,), name='user')
 movie_input = tf.keras.layers.Input(shape=(1,), name='movie')
 
@@ -35,6 +41,10 @@ flatten = tf.keras.layers.Flatten()(dot_product)
 model = tf.keras.Model(inputs=[user_input, movie_input], outputs=flatten)
 model.compile(optimizer='adam', loss='mean_squared_error')
 
+# Train the model
 model.fit([X_train[:, 0], X_train[:, 1]], y_train, epochs=5, batch_size=64)
 
-model.save('recommender_model/1/')
+# Save the model in SavedModel format
+import os
+os.makedirs('recommender_model/1', exist_ok=True)
+tf.saved_model.save(model, 'recommender_model/1/')
