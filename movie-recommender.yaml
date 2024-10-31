@@ -1,0 +1,8 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: movie-recommender
+spec:
+  predictor:
+    tensorflow:
+      storageUri: "pvc://model-pvc/recommender_model"
